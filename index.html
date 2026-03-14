@@ -890,28 +890,17 @@ function apiCall(params) {
 // SETUP
 // ════════════════════════════════════════════════════════════
 async function verificarSetup() {
-  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('https://script.google.com/macros/s/AKfycbwd2rSY-s9fJsBG_XK0ZrAS6e9gDuedEEdKQTuhJ3CJ1z_l8saccVruC3XzxXRpEltO3A/exec')) {
-    document.getElementById('setupBanner').style.display = 'block';
-    document.getElementById('setupBanner').innerHTML =
-      '⚠️ Configura la URL de Apps Script en el archivo index.html (línea: APPS_SCRIPT_URL)';
-    return;
-  }
+  document.getElementById('setupBanner').style.display = 'none';
   try {
-    const r = await apiCall({ action: 'setup' });
-    if (!r.ok) {
-      document.getElementById('setupBanner').style.display = 'block';
-      return;
-    }
-    // Verificar si la tabla está vacía → mostrar Registrar para crear Admin inicial
-    const rEmpleados = await apiCall({ action: 'contarEmpleados' });
-    if (rEmpleados.ok && rEmpleados.total === 0) {
+    const r = await apiCall({ action: 'contarEmpleados' });
+    if (r.ok && r.total === 0) {
       mostrarTabRegistrar();
       mostrarAlerta('alertRegistro',
-        '👋 Bienvenido. No hay empleados registrados. Registra el primer Admin.', 'info');
+        '👋 Bienvenido. Registra el primer Admin.', 'info');
       showTab('registrar', document.getElementById('tabRegistrar'));
     }
   } catch(e) {
-    document.getElementById('setupBanner').style.display = 'block';
+    console.log('Setup:', e.message);
   }
 }
 
