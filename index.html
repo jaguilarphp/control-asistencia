@@ -812,7 +812,7 @@
 // ════════════════════════════════════════════════════════════
 // CONFIGURACIÓN — reemplaza con tu URL de Apps Script
 // ════════════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = 'TU_URL_APPS_SCRIPT_AQUI';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzQ08sBiCbaSGpbQOeOL07QyuHnl4Grwpz3ytkYznXoOr9zL0Qx5QIy2uK2xzNgibTgJw/exec';
 
 // ════════════════════════════════════════════════════════════
 // ESTADO GLOBAL
@@ -890,7 +890,7 @@ function apiCall(params) {
 // SETUP
 // ════════════════════════════════════════════════════════════
 async function verificarSetup() {
-  if (APPS_SCRIPT_URL === 'TU_URL_APPS_SCRIPT_AQUI') {
+  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbzQ08sBiCbaSGpbQOeOL07QyuHnl4Grwpz3ytkYznXoOr9zL0Qx5QIy2uK2xzNgibTgJw/exec') {
     document.getElementById('setupBanner').style.display = 'block';
     document.getElementById('setupBanner').innerHTML =
       '⚠️ Configura la URL de Apps Script en el archivo index.html (línea: APPS_SCRIPT_URL)';
