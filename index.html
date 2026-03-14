@@ -950,22 +950,25 @@ function setGPSStatus(ok, texto) {
 // ════════════════════════════════════════════════════════════
 async function cargarModelos() {
   const statusEl = document.getElementById('modelsStatus');
+  statusEl.innerHTML = '<div class="spinner"></div> Cargando modelo 1/3...';
   try {
-    const MODEL_URL = './weights';
-    await Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-    ]);
+    await faceapi.nets.ssdMobilenetv1.loadFromUri('./weights');
+    statusEl.innerHTML = '<div class="spinner"></div> Cargando modelo 2/3...';
+    await faceapi.nets.faceLandmark68Net.loadFromUri('./weights');
+    statusEl.innerHTML = '<div class="spinner"></div> Cargando modelo 3/3...';
+    await faceapi.nets.faceRecognitionNet.loadFromUri('./weights');
     state.modelsLoaded = true;
     statusEl.innerHTML = '✅ Reconocimiento facial listo';
     statusEl.style.background = 'var(--success-light)';
     statusEl.style.color = 'var(--success)';
     setTimeout(() => statusEl.style.display = 'none', 3000);
   } catch(e) {
-    statusEl.innerHTML = '⚠️ Error cargando reconocimiento facial';
-    statusEl.style.background = 'var(--warning-light)';
-    statusEl.style.color = 'var(--warning)';
+    statusEl.innerHTML = '❌ ERROR DETALLADO: ' + e.name + ' — ' + e.message + ' — ' + (e.stack || '');
+    statusEl.style.background = 'var(--error-light)';
+    statusEl.style.color = 'var(--error)';
+    statusEl.style.fontSize = '11px';
+    statusEl.style.whiteSpace = 'pre-wrap';
+    statusEl.style.wordBreak = 'break-all';
   }
 }
 
