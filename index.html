@@ -950,40 +950,39 @@ function setGPSStatus(ok, texto) {
 // ════════════════════════════════════════════════════════════
 async function cargarModelos() {
   const statusEl = document.getElementById('modelsStatus');
-  const BASE = 'https://jaguilarphp.github.io/control-asistencia/weights';
 
-  async function cargarConReintentos(red, nombre, intentos = 3) {
-    for (let i = 1; i <= intentos; i++) {
-      try {
-        statusEl.innerHTML = '<div class="spinner"></div> Cargando ' + nombre + ' (' + i + '/' + intentos + ')...';
-        await red.loadFromUri(BASE);
-        return true;
-      } catch(e) {
-        if (i === intentos) throw e;
-        await new Promise(r => setTimeout(r, 2000));
-      }
+  // Intentar primero con archivos locales, luego con CDN como respaldo
+  const FUENTES = [
+    'https://jaguilarphp.github.io/control-asistencia/weights',
+    'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights'
+  ];
+
+  for (const BASE of FUENTES) {
+    try {
+      statusEl.innerHTML = '<div class="spinner"></div> Cargando detector facial...';
+      await faceapi.nets.ssdMobilenetv1.loadFromUri(BASE);
+      statusEl.innerHTML = '<div class="spinner"></div> Cargando puntos de referencia...';
+      await faceapi.nets.faceLandmark68Net.loadFromUri(BASE);
+      statusEl.innerHTML = '<div class="spinner"></div> Cargando reconocimiento...';
+      await faceapi.nets.faceRecognitionNet.loadFromUri(BASE);
+      state.modelsLoaded = true;
+      statusEl.innerHTML = '✅ Reconocimiento facial listo';
+      statusEl.style.background = 'var(--success-light)';
+      statusEl.style.color = 'var(--success)';
+      setTimeout(() => statusEl.style.display = 'none', 3000);
+      return;
+    } catch(e) {
+      console.warn('Fallo cargando desde ' + BASE + ':', e.message);
+      statusEl.innerHTML = '<div class="spinner"></div> Reintentando con fuente alternativa...';
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
 
-  try {
-    await cargarConReintentos(faceapi.nets.ssdMobilenetv1, 'detector');
-    await cargarConReintentos(faceapi.nets.faceLandmark68Net, 'landmarks');
-    await cargarConReintentos(faceapi.nets.faceRecognitionNet, 'reconocimiento');
-    state.modelsLoaded = true;
-    statusEl.innerHTML = '✅ Reconocimiento facial listo';
-    statusEl.style.background = 'var(--success-light)';
-    statusEl.style.color = 'var(--success)';
-    setTimeout(() => statusEl.style.display = 'none', 3000);
-  } catch(e) {
-    statusEl.innerHTML = '❌ Error: ' + e.message;
-    statusEl.style.background = 'var(--error-light)';
-    statusEl.style.color = 'var(--error)';
-    statusEl.style.fontSize = '12px';
-    statusEl.style.whiteSpace = 'pre-wrap';
-    statusEl.style.wordBreak = 'break-all';
-    statusEl.style.minHeight = '80px';
-    console.error('Error modelos:', e);
-  }
+  // Si todo falla, permitir usar la app sin reconocimiento facial
+  statusEl.innerHTML = '⚠️ Reconocimiento facial no disponible. La app funcionará sin verificación de rostro.';
+  statusEl.style.background = 'var(--warning-light)';
+  statusEl.style.color = 'var(--warning)';
+  state.modelsLoaded = false;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1125,8 +1124,10 @@ async function iniciarCamaraMarcacion() {
 }
 
 async function capturarYVerificar() {
+  // Si los modelos no cargaron, registrar sin verificación facial
   if (!state.modelsLoaded) {
-    mostrarAlerta('alertMarcacion', '⏳ Modelos de reconocimiento aún cargando...', 'warning');
+    const confirmar = confirm('⚠️ Reconocimiento facial no disponible.\n¿Deseas registrar la asistencia sin verificación?');
+    if (confirmar) registrarAsistenciaFinal();
     return;
   }
 
