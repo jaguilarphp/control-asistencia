@@ -950,25 +950,39 @@ function setGPSStatus(ok, texto) {
 // ════════════════════════════════════════════════════════════
 async function cargarModelos() {
   const statusEl = document.getElementById('modelsStatus');
-  statusEl.innerHTML = '<div class="spinner"></div> Cargando modelo 1/3...';
+  const BASE = 'https://jaguilarphp.github.io/control-asistencia/weights';
+
+  async function cargarConReintentos(red, nombre, intentos = 3) {
+    for (let i = 1; i <= intentos; i++) {
+      try {
+        statusEl.innerHTML = '<div class="spinner"></div> Cargando ' + nombre + ' (' + i + '/' + intentos + ')...';
+        await red.loadFromUri(BASE);
+        return true;
+      } catch(e) {
+        if (i === intentos) throw e;
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+  }
+
   try {
-    await faceapi.nets.ssdMobilenetv1.loadFromUri('./weights');
-    statusEl.innerHTML = '<div class="spinner"></div> Cargando modelo 2/3...';
-    await faceapi.nets.faceLandmark68Net.loadFromUri('./weights');
-    statusEl.innerHTML = '<div class="spinner"></div> Cargando modelo 3/3...';
-    await faceapi.nets.faceRecognitionNet.loadFromUri('./weights');
+    await cargarConReintentos(faceapi.nets.ssdMobilenetv1, 'detector');
+    await cargarConReintentos(faceapi.nets.faceLandmark68Net, 'landmarks');
+    await cargarConReintentos(faceapi.nets.faceRecognitionNet, 'reconocimiento');
     state.modelsLoaded = true;
     statusEl.innerHTML = '✅ Reconocimiento facial listo';
     statusEl.style.background = 'var(--success-light)';
     statusEl.style.color = 'var(--success)';
     setTimeout(() => statusEl.style.display = 'none', 3000);
   } catch(e) {
-    statusEl.innerHTML = '❌ ERROR DETALLADO: ' + e.name + ' — ' + e.message + ' — ' + (e.stack || '');
+    statusEl.innerHTML = '❌ Error: ' + e.message;
     statusEl.style.background = 'var(--error-light)';
     statusEl.style.color = 'var(--error)';
-    statusEl.style.fontSize = '11px';
+    statusEl.style.fontSize = '12px';
     statusEl.style.whiteSpace = 'pre-wrap';
     statusEl.style.wordBreak = 'break-all';
+    statusEl.style.minHeight = '80px';
+    console.error('Error modelos:', e);
   }
 }
 
