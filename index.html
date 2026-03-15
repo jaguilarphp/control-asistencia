@@ -848,6 +848,22 @@ function actualizarReloj() {
 // ════════════════════════════════════════════════════════════
 // API CALL — JSONP para evitar CORS
 // ════════════════════════════════════════════════════════════
+// Comprimir imagen antes de enviar
+function comprimirImagen(base64, maxWidth = 200, quality = 0.5) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = base64;
+  });
+}
+
 function apiCall(params) {
   return new Promise((resolve, reject) => {
     const cbName = 'cb_' + Date.now();
@@ -861,7 +877,7 @@ function apiCall(params) {
 
     window[cbName] = (data) => {
       delete window[cbName];
-      document.head.removeChild(script);
+      if (document.head.contains(script)) document.head.removeChild(script);
       resolve(data);
     };
 
@@ -878,7 +894,7 @@ function apiCall(params) {
         delete window[cbName];
         reject(new Error('Timeout de conexión'));
       }
-    }, 15000);
+    }, 30000);
   });
 }
 
@@ -1301,9 +1317,13 @@ async function guardarEmpleado() {
   btn.textContent = '⏳ Guardando...';
 
   try {
+    // Comprimir foto para que quepa en la URL
+    const fotoComprimida = await comprimirImagen(state.fotoRegistroBase64, 200, 0.5);
+    console.log('Tamaño foto original:', state.fotoRegistroBase64.length, 'comprimida:', fotoComprimida.length);
+
     const r = await apiCall({
       action: 'registrarEmpleado',
-      datos: { rut, nombre, cargo, area, email, fotoBase64: state.fotoRegistroBase64 }
+      datos: { rut, nombre, cargo, area, email, fotoBase64: fotoComprimida }
     });
 
     btn.disabled = false;
