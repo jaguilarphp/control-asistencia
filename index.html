@@ -667,6 +667,7 @@
   <div class="tabs" id="tabsContainer">
     <button class="tab active" id="tabMarcar" onclick="showTab('marcar', this)">📍 Marcar Asistencia</button>
     <button class="tab" id="tabRegistrar" onclick="showTab('registrar', this)" style="display:none">👤 Registrar Empleado</button>
+    <button class="tab" id="tabUnidades" onclick="showTab('unidades', this)" style="display:none">🏢 Unidades</button>
   </div>
 
   <!-- ═══════════════════════════════════ -->
@@ -741,6 +742,51 @@
     </div>
 
     <div class="alert" id="alertMarcacion"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- PANEL UNIDADES                      -->
+  <!-- ═══════════════════════════════════ -->
+  <div id="panel-unidades" class="panel">
+
+    <div class="card">
+      <div class="card-title">Nueva Unidad</div>
+      <div class="input-group">
+        <label>Nombre de la unidad</label>
+        <input type="text" id="unidadNombre" placeholder="Ej: Bodega Central">
+      </div>
+      <div class="input-group">
+        <label>Descripción</label>
+        <input type="text" id="unidadDescripcion" placeholder="Descripción del lugar">
+      </div>
+      <div class="input-group">
+        <label>Coordenadas</label>
+        <input type="text" id="unidadCoordenadas" placeholder="-33.4567, -70.6543">
+        <button onclick="usarUbicacionActual()" style="margin-top:8px;padding:10px;background:var(--accent-light);color:var(--accent);border:none;border-radius:10px;font-weight:700;cursor:pointer;width:100%;font-size:13px">
+          📍 Usar mi ubicación actual
+        </button>
+      </div>
+      <div class="input-group">
+        <label>Dirección</label>
+        <input type="text" id="unidadDireccion" placeholder="Se llena automáticamente">
+      </div>
+      <div class="input-group">
+        <label>¿Activa?</label>
+        <select id="unidadActiva">
+          <option value="true">✅ Sí</option>
+          <option value="false">❌ No</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="guardarUnidad()">💾 Guardar Unidad</button>
+    </div>
+
+    <div class="alert" id="alertUnidades"></div>
+
+    <div class="card">
+      <div class="card-title">Unidades Registradas</div>
+      <div id="listaUnidades"><p style="font-size:14px;color:var(--text3);text-align:center;padding:12px">Cargando...</p></div>
+    </div>
+
   </div>
 
   <!-- ═══════════════════════════════════ -->
@@ -995,6 +1041,7 @@ function mostrarTabRegistrar() {
 
 function ocultarTabRegistrar() {
   document.getElementById('tabRegistrar').style.display = 'none';
+  document.getElementById('tabUnidades').style.display = 'none';
   showTab('marcar', document.getElementById('tabMarcar'));
 }
 
@@ -1159,6 +1206,8 @@ async function buscarEmpleadoMarcacion() {
       if (r.empleado.cargo.toUpperCase() === 'ADMIN') {
         state.adminActual = r.empleado;
         mostrarTabRegistrar();
+        document.getElementById('tabUnidades').style.display = 'block';
+        cargarListaUnidades();
         showTab('registrar', document.getElementById('tabRegistrar'));
         mostrarAlerta('alertRegistro',
           `👋 Bienvenido, ${r.empleado.nombre}. Acceso de administrador habilitado.`, 'success');
@@ -1372,6 +1421,7 @@ async function registrarAsistenciaFinal() {
     if (r.ok) {
       if (state.streamMarcacion) { state.streamMarcacion.getTracks().forEach(t => t.stop()); state.streamMarcacion = null; }
       mostrarAlerta('alertMarcacion', '✅ ' + r.mensaje, 'success');
+      notificarAdminWhatsApp(state.empleadoActual.nombre, state.tipoMarcacion, state.gps.address);
       document.getElementById('seccionCamara').style.display = 'none';
       cargarHistorialHoy(state.empleadoActual.rut);
 
