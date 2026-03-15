@@ -959,10 +959,6 @@ function apiCallPost(params) {
 }
 
 function apiCall(params) {
-  const jsonStr = JSON.stringify(params);
-  if (jsonStr.length > 3000) {
-    return apiCallPost(params);
-  }
   return apiCallGet(params);
 }
 
@@ -1382,35 +1378,49 @@ async function guardarEmpleado() {
 
   const btn = document.getElementById('btnGuardarEmpleado');
   btn.disabled = true;
-  btn.textContent = '⏳ Guardando...';
+  btn.textContent = '⏳ Guardando datos...';
 
   try {
-    // Comprimir foto para que quepa en la URL
-    const fotoComprimida = await comprimirImagen(state.fotoRegistroBase64, 200, 0.5);
-    console.log('Tamaño foto original:', state.fotoRegistroBase64.length, 'comprimida:', fotoComprimida.length);
-
-    const r = await apiCall({
+    // PASO 1 — Guardar datos sin foto
+    const r = await apiCallGet({
       action: 'registrarEmpleado',
-      datos: { rut, nombre, cargo, area, email, fotoBase64: fotoComprimida }
+      datos: { rut, nombre, cargo, area, email, fotoBase64: '' }
     });
+
+    if (!r.ok) throw new Error(r.error || 'Error guardando datos');
+
+    // PASO 2 — Enviar foto comprimida en chunks pequeños
+    btn.textContent = '⏳ Subiendo foto...';
+    const fotoComprimida = await comprimirImagen(state.fotoRegistroBase64, 120, 0.35);
+
+    const CHUNK = 1500;
+    const chunks = [];
+    for (let i = 0; i < fotoComprimida.length; i += CHUNK) {
+      chunks.push(fotoComprimida.slice(i, i + CHUNK));
+    }
+
+    for (let i = 0; i < chunks.length; i++) {
+      btn.textContent = `⏳ Foto ${i+1}/${chunks.length}...`;
+      const rc = await apiCallGet({
+        action: 'recibirChunkFoto',
+        rut,
+        chunk: chunks[i],
+        index: i,
+        total: chunks.length
+      });
+      if (!rc.ok) throw new Error('Error subiendo foto parte ' + (i+1));
+    }
 
     btn.disabled = false;
     btn.textContent = '💾 Guardar empleado';
+    mostrarAlerta('alertRegistro', '✅ Empleado guardado correctamente', 'success');
+    limpiarRegistro();
+    if (state.adminActual) setTimeout(() => ocultarTabRegistrar(), 2000);
 
-    if (r.ok) {
-      mostrarAlerta('alertRegistro', `✅ ${r.mensaje}`, 'success');
-      limpiarRegistro();
-      // Si no es el admin actual, ocultar pestaña Registrar
-      if (state.adminActual) {
-        setTimeout(() => ocultarTabRegistrar(), 2000);
-      }
-    } else {
-      mostrarAlerta('alertRegistro', `❌ ${r.error}`, 'error');
-    }
   } catch(e) {
     btn.disabled = false;
     btn.textContent = '💾 Guardar empleado';
-    mostrarAlerta('alertRegistro', `❌ ${e.message}`, 'error');
+    mostrarAlerta('alertRegistro', '❌ ' + e.message, 'error');
   }
 }
 
