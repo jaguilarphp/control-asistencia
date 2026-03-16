@@ -1693,23 +1693,28 @@ async function notificarAdminWhatsApp(nombre, tipo, direccion) {
 // UNIDADES
 // ════════════════════════════════════════════════════════════
 async function guardarUnidad() {
-  const nombre      = document.getElementById('unidadNombre').value.trim();
+  const unidad      = document.getElementById('unidadNombre').value.trim();
   const descripcion = document.getElementById('unidadDescripcion').value.trim();
   const coordenadas = document.getElementById('unidadCoordenadas').value.trim();
   const direccion   = document.getElementById('unidadDireccion').value.trim();
   const activa      = document.getElementById('unidadActiva').value;
 
-  if (!nombre) {
+  if (!unidad) {
     mostrarAlerta('alertUnidades', '⚠️ El número de unidad es obligatorio.', 'warning');
     return;
   }
 
   mostrarAlerta('alertUnidades', '<div class="spinner"></div> Guardando...', 'info');
   try {
-    const r = await apiCallGet({
-      action: 'guardarUnidad',
-      datos: { nombre, descripcion, coordenadas, direccion, activa }
-    });
+    // Construir URL de diagnóstico visible en consola
+    const params = { action: 'guardarUnidad', unidad, descripcion, coordenadas, direccion, activa };
+    const urlDiag = new URL(APPS_SCRIPT_URL);
+    Object.entries(params).forEach(([k,v]) => urlDiag.searchParams.set(k, v));
+    console.log('📤 URL guardarUnidad:', urlDiag.toString());
+
+    const r = await apiCallGet(params);
+    console.log('📥 Respuesta guardarUnidad:', JSON.stringify(r));
+
     if (r.ok) {
       mostrarAlerta('alertUnidades', '✅ Unidad guardada correctamente.', 'success');
       document.getElementById('unidadNombre').value = '';
@@ -1719,10 +1724,12 @@ async function guardarUnidad() {
       document.getElementById('unidadActiva').value = 'true';
       cargarListaUnidades();
     } else {
-      mostrarAlerta('alertUnidades', `❌ ${r.error || 'Error al guardar'}`, 'error');
+      mostrarAlerta('alertUnidades', `❌ Error: ${r.error || JSON.stringify(r)}`, 'error');
+      console.error('❌ Error detalle:', r);
     }
   } catch(e) {
     mostrarAlerta('alertUnidades', `❌ Error de conexión: ${e.message}`, 'error');
+    console.error('❌ Excepción:', e);
   }
 }
 
