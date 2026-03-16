@@ -529,32 +529,22 @@
       display: none;
       line-height: 1.5;
       border: 2px solid transparent;
+      transition: opacity 0.4s ease;
     }
 
     .alert.visible { display: block; }
 
-    .alert-success {
+    /* Todas las alertas en verde claro */
+    .alert-success, .alert-error, .alert-warning, .alert-info {
       background: var(--success-light);
       border-color: rgba(47,158,68,0.3);
       color: var(--success);
     }
-
-    .alert-error {
-      background: var(--error-light);
-      border-color: rgba(201,42,42,0.3);
-      color: var(--error);
-    }
-
-    .alert-info {
+    /* Excepción: procesos en curso (spinner) mantienen color azul */
+    .alert-loading {
       background: var(--accent-light);
       border-color: rgba(59,91,219,0.2);
       color: var(--accent);
-    }
-
-    .alert-warning {
-      background: var(--warning-light);
-      border-color: rgba(230,119,0,0.3);
-      color: var(--warning);
     }
 
     /* ── Verify status ── */
@@ -756,7 +746,7 @@
 
     <div class="card">
       <div class="card-title" style="cursor:pointer;justify-content:space-between;margin-bottom:0" onclick="toggleAcordeon('unidadBody','unidadArrow')">
-        <span style="display:flex;align-items:center;gap:8px"><span style="content:'';width:4px;height:16px;background:var(--accent);border-radius:2px;display:inline-block"></span>Nueva Unidad</span>
+        <span>Nueva Unidad</span>
         <span id="unidadArrow" style="font-size:18px;color:var(--accent);transition:transform 0.3s">&#8963;</span>
       </div>
       <div id="unidadBody" style="display:none;margin-top:18px">
@@ -807,7 +797,7 @@
     <!-- Card Nuevo Empleado tipo acordeón -->
     <div class="card">
       <div class="card-title" style="cursor:pointer;justify-content:space-between;margin-bottom:0" onclick="toggleAcordeon('empleadoBody','empleadoArrow')">
-        <span style="display:flex;align-items:center;gap:8px"><span style="display:inline-block;width:4px;height:16px;background:var(--accent);border-radius:2px"></span>Nuevo Empleado</span>
+        <span>Nuevo Empleado</span>
         <span id="empleadoArrow" style="font-size:18px;color:var(--accent);transition:transform 0.3s">&#8963;</span>
       </div>
       <div id="empleadoBody" style="display:none;margin-top:18px">
@@ -1139,6 +1129,11 @@ async function obtenerDireccion(lat, lng) {
       state.gps.address = direccionCorta;
       document.getElementById('direccionText').textContent = direccionCorta;
       document.getElementById('direccionBadge').style.display = 'block';
+      // Si el campo de dirección de unidad está vacío y visible, llenarlo también
+      const campoDireccion = document.getElementById('unidadDireccion');
+      if (campoDireccion && !campoDireccion.value) campoDireccion.value = direccionCorta;
+      const campoCoord = document.getElementById('unidadCoordenadas');
+      if (campoCoord && !campoCoord.value && state.gps.lat) campoCoord.value = state.gps.lat.toFixed(6) + ', ' + state.gps.lng.toFixed(6);
     }
   } catch(e) {
     console.log('Geocoding error:', e.message);
@@ -1272,7 +1267,7 @@ async function buscarEmpleadoMarcacion() {
         const banner = document.getElementById('adminBanner');
         document.getElementById('adminBannerText').textContent = `👋 Bienvenido, ${r.empleado.nombre}. Acceso de administrador habilitado.`;
         banner.style.display = 'block';
-        setTimeout(() => { banner.style.opacity='0'; banner.style.transition='opacity 0.5s'; setTimeout(()=>banner.style.display='none',500); }, 10000);
+        setTimeout(() => { banner.style.opacity='0'; banner.style.transition='opacity 0.5s'; setTimeout(()=>banner.style.display='none',500); }, 5000);
         return;
       }
       // Usuario normal → marcar asistencia
@@ -1723,6 +1718,17 @@ function toggleAcordeon(bodyId, arrowId) {
   const open = body.style.display !== 'none';
   body.style.display = open ? 'none' : 'block';
   arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+  // Al abrir el acordeón de Unidades, pre-rellenar GPS si campos vacíos
+  if (!open && bodyId === 'unidadBody') {
+    const campoCoord = document.getElementById('unidadCoordenadas');
+    const campoDireccion = document.getElementById('unidadDireccion');
+    if (!campoCoord.value && state.gps.lat && state.gps.lng) {
+      campoCoord.value = state.gps.lat.toFixed(6) + ', ' + state.gps.lng.toFixed(6);
+    }
+    if (!campoDireccion.value && state.gps.address) {
+      campoDireccion.value = state.gps.address;
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1795,9 +1801,18 @@ async function cargarListaEmpleados() {
 async function guardarUnidad() {
   const unidad      = document.getElementById('unidadNombre').value.trim();
   const descripcion = document.getElementById('unidadDescripcion').value.trim();
-  const coordenadas = document.getElementById('unidadCoordenadas').value.trim();
-  const direccion   = document.getElementById('unidadDireccion').value.trim();
-  const activa      = document.getElementById('unidadActiva').value;
+  // Si el campo está vacío, usar los datos GPS del estado global como fallback
+  let coordenadas = document.getElementById('unidadCoordenadas').value.trim();
+  let direccion   = document.getElementById('unidadDireccion').value.trim();
+  if (!coordenadas && state.gps.lat && state.gps.lng) {
+    coordenadas = state.gps.lat.toFixed(6) + ', ' + state.gps.lng.toFixed(6);
+    document.getElementById('unidadCoordenadas').value = coordenadas;
+  }
+  if (!direccion && state.gps.address) {
+    direccion = state.gps.address;
+    document.getElementById('unidadDireccion').value = direccion;
+  }
+  const activa = document.getElementById('unidadActiva').value;
 
   if (!unidad) {
     mostrarAlerta('alertUnidades', '⚠️ El número de unidad es obligatorio.', 'warning');
@@ -1882,13 +1897,29 @@ function cargarImagen(src, crossOrigin) {
   });
 }
 
+// timers para auto-ocultar alertas
+const _alertTimers = {};
+
 function mostrarAlerta(id, msg, tipo) {
   const el = document.getElementById(id);
   el.innerHTML = msg;
-  el.className = `alert alert-${tipo} visible`;
+  // Si es proceso en curso (spinner), usar clase loading (azul, sin auto-ocultar)
+  const esLoader = msg.includes('spinner') || msg.includes('⏳') || tipo === 'loading';
+  el.className = `alert alert-${esLoader ? 'loading' : tipo} visible`;
+  el.style.opacity = '1';
+  // Cancelar timer anterior si existía
+  if (_alertTimers[id]) clearTimeout(_alertTimers[id]);
+  // Auto-ocultar en 5 segundos (excepto loaders)
+  if (!esLoader) {
+    _alertTimers[id] = setTimeout(() => {
+      el.style.opacity = '0';
+      setTimeout(() => { el.className = 'alert'; el.style.opacity = '1'; }, 400);
+    }, 5000);
+  }
 }
 
 function ocultarAlerta(id) {
+  if (_alertTimers[id]) clearTimeout(_alertTimers[id]);
   document.getElementById(id).className = 'alert';
 }
 </script>
