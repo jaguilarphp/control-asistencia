@@ -1442,103 +1442,114 @@ async function iniciarCamaraMarcacion() {
 }
 
 async function capturarYVerificar() {
-  // Si los modelos no cargaron, registrar sin verificación facial
+  const guide = document.getElementById('faceGuideMarcacion');
+  const btnCap = document.getElementById('btnCapturarMarcacion');
+
+  // Función interna: registrar directamente sin verificación
+  function registrarSinVerificacion(motivo) {
+    console.log('Registrando sin verificación facial:', motivo);
+    guide.className = 'face-guide verified';
+    document.getElementById('verifyStatus').textContent = '✅ Procesando...';
+    setTimeout(() => registrarAsistenciaFinal(), 400);
+  }
+
+  // Si los modelos no cargaron → registrar directo
   if (!state.modelsLoaded) {
-    const confirmar = confirm('⚠️ Reconocimiento facial no disponible.\n¿Deseas registrar la asistencia sin verificación?');
-    if (confirmar) registrarAsistenciaFinal();
+    registrarSinVerificacion('modelos no cargados');
     return;
   }
 
-  const guide = document.getElementById('faceGuideMarcacion');
   guide.className = 'face-guide detecting';
-  document.getElementById('verifyStatus').innerHTML = '<div class="spinner"></div> Analizando rostro...';
-  document.getElementById('btnCapturarMarcacion').disabled = true;
+  document.getElementById('verifyStatus').innerHTML = '<div class="spinner"></div> Verificando rostro...';
+  btnCap.disabled = true;
 
   try {
+    // 1. Capturar frame de la cámara
     const video = document.getElementById('videoMarcacion');
     const canvas = document.getElementById('canvasMarcacion');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 640;
     const ctx = canvas.getContext('2d');
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0);
 
-    const fotoActualBase64 = canvas.toDataURL('image/jpeg', 0.8);
-
-    // Verificar si hay foto de referencia disponible
-    if (!state.empleadoActual.fotoUrl) {
-      // Sin foto de referencia → registrar directamente
-      guide.className = 'face-guide verified';
-      document.getElementById('verifyStatus').textContent = '✅ Sin foto de referencia — registrando...';
-      setTimeout(() => registrarAsistenciaFinal(), 400);
-      return;
-    }
-
-    // Intentar cargar foto de referencia con CORS
-    let imgRefCanvas = null;
-    try {
-      const imgRef = await cargarImagen(state.empleadoActual.fotoUrl, true);
-      const canvasRef = document.createElement('canvas');
-      canvasRef.width  = imgRef.naturalWidth  || imgRef.width  || 200;
-      canvasRef.height = imgRef.naturalHeight || imgRef.height || 200;
-      canvasRef.getContext('2d').drawImage(imgRef, 0, 0);
-      // Probar si el canvas está tainted intentando leer un pixel
-      canvasRef.getContext('2d').getImageData(0, 0, 1, 1);
-      imgRefCanvas = await cargarImagen(canvasRef.toDataURL('image/jpeg', 0.9), false);
-    } catch(corsErr) {
-      // CORS bloqueó la foto de referencia → registrar sin verificación
-      console.warn('CORS en foto de referencia:', corsErr.message);
-      guide.className = 'face-guide verified';
-      document.getElementById('verifyStatus').textContent = '✅ Verificación omitida (foto externa) — registrando...';
-      setTimeout(() => registrarAsistenciaFinal(), 400);
-      return;
-    }
-
-    // Detectar rostro actual
-    const imgActual = await cargarImagen(fotoActualBase64, false);
-    const detActual = await faceapi.detectSingleFace(imgActual, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks(true).withFaceDescriptor();
+    // 2. Detectar rostro actual
+    const imgActual = await cargarImagen(canvas.toDataURL('image/jpeg', 0.8), false);
+    const detActual = await faceapi
+      .detectSingleFace(imgActual, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks(true)
+      .withFaceDescriptor();
 
     if (!detActual) {
       guide.className = 'face-guide failed';
-      document.getElementById('verifyStatus').textContent = '⚠️ Rostro no detectado. Ajusta posición e iluminación.';
-      document.getElementById('btnCapturarMarcacion').disabled = false;
+      document.getElementById('verifyStatus').textContent = '⚠️ No se detectó tu rostro. Ajusta posición e iluminación.';
+      btnCap.disabled = false;
       return;
     }
 
-    // Detectar rostro de referencia
-    const detRef = await faceapi.detectSingleFace(imgRefCanvas, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks(true).withFaceDescriptor();
+    // 3. Si no hay foto de referencia → registrar con rostro detectado
+    if (!state.empleadoActual.fotoUrl) {
+      registrarSinVerificacion('sin foto de referencia');
+      return;
+    }
 
+    // 4. Intentar cargar foto de referencia y procesarla
+    let detRef = null;
+    try {
+      // Cargar en un canvas intermedio para evitar taint CORS
+      const tmpImg = await new Promise((res, rej) => {
+        const i = new Image();
+        i.crossOrigin = 'anonymous';
+        i.onload = () => res(i);
+        i.onerror = rej;
+        i.src = state.empleadoActual.fotoUrl + (state.empleadoActual.fotoUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+      });
+      const tmpCanvas = document.createElement('canvas');
+      tmpCanvas.width  = tmpImg.naturalWidth  || 200;
+      tmpCanvas.height = tmpImg.naturalHeight || 200;
+      const tmpCtx = tmpCanvas.getContext('2d');
+      tmpCtx.drawImage(tmpImg, 0, 0);
+      // Verificar que no está tainted
+      tmpCtx.getImageData(0, 0, 1, 1);
+      const imgRef = await cargarImagen(tmpCanvas.toDataURL('image/jpeg', 0.9), false);
+      detRef = await faceapi
+        .detectSingleFace(imgRef, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+    } catch(corsErr) {
+      // CORS u otro error cargando foto de referencia → registrar sin comparar
+      console.warn('No se pudo cargar foto de referencia:', corsErr);
+      registrarSinVerificacion('CORS en foto de referencia');
+      return;
+    }
+
+    // 5. Si no se detectó rostro en la referencia → registrar igual
     if (!detRef) {
-      // No se pudo procesar foto de referencia → registrar igual
-      guide.className = 'face-guide verified';
-      document.getElementById('verifyStatus').textContent = '✅ Foto de referencia no procesable — registrando...';
-      setTimeout(() => registrarAsistenciaFinal(), 400);
+      registrarSinVerificacion('sin rostro detectado en referencia');
       return;
     }
 
+    // 6. Comparar descriptores
     const distancia = faceapi.euclideanDistance(detRef.descriptor, detActual.descriptor);
-    const UMBRAL = 0.55;
+    const similitud = Math.round((1 - distancia) * 100);
+    const UMBRAL = 0.6; // más permisivo para variaciones de luz/ángulo
 
     if (distancia < UMBRAL) {
-      const similitud = Math.round((1 - distancia) * 100);
       guide.className = 'face-guide verified';
-      document.getElementById('verifyStatus').textContent = `✅ Verificado — ${similitud}% de similitud`;
+      document.getElementById('verifyStatus').textContent = `✅ Verificado — ${similitud}% similitud`;
       setTimeout(() => registrarAsistenciaFinal(), 600);
     } else {
       guide.className = 'face-guide failed';
-      const similitud = Math.round((1 - distancia) * 100);
       document.getElementById('verifyStatus').textContent = `❌ No coincide (${similitud}%). Intenta de nuevo.`;
-      mostrarAlerta('alertMarcacion', '❌ Verificación fallida. Asegúrate de buena iluminación y rostro visible.', 'error');
-      document.getElementById('btnCapturarMarcacion').disabled = false;
+      mostrarAlerta('alertMarcacion', '❌ Rostro no reconocido. Mejora la iluminación e intenta de nuevo.', 'error');
+      btnCap.disabled = false;
     }
 
   } catch(e) {
-    console.error('Error verificación:', e);
-    guide.className = 'face-guide failed';
-    document.getElementById('verifyStatus').textContent = '❌ Error en verificación';
-    mostrarAlerta('alertMarcacion', '❌ ' + (e.message || 'Error desconocido en verificación'), 'error');
-    document.getElementById('btnCapturarMarcacion').disabled = false;
+    // Cualquier error inesperado → registrar sin verificación para no bloquear al usuario
+    console.error('Error inesperado en verificación:', e);
+    registrarSinVerificacion('error inesperado: ' + (e && e.message ? e.message : String(e)));
   }
 }
 
@@ -1570,10 +1581,10 @@ async function registrarAsistenciaFinal() {
       document.getElementById('faceGuideMarcacion').className = 'face-guide';
       document.getElementById('btnCapturarMarcacion').disabled = false;
     } else {
-      mostrarAlerta('alertMarcacion', '❌ ' + (r.error || 'Error al registrar asistencia'), 'error');
+      mostrarAlerta('alertMarcacion', '❌ ' + (r && r.error ? r.error : 'Error al registrar'), 'error');
     }
   } catch(e) {
-    mostrarAlerta('alertMarcacion', '❌ ' + (e.message || 'Error de conexión'), 'error');
+    mostrarAlerta('alertMarcacion', '❌ ' + (e && e.message ? e.message : 'Error de conexión'), 'error');
   }
 }
 
