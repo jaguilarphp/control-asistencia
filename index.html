@@ -921,7 +921,7 @@ async function cargarFaceApi() {
 // ════════════════════════════════════════════════════════════
 // CONFIGURACIÓN — reemplaza con tu URL de Apps Script
 // ════════════════════════════════════════════════════════════
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwX-DJQ1FDVgKrmfEZ2tBpKlDWPUqOIJSeECyBI5qrdsIIJGRvsogmuPoEyqU4KaVnHVw/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzdCNkJ89E8cW03WlMpp5waSg1fIhtPARpvEWxhhFzHVc5L4fufNaaup5forkXtucjlcg/exec';
 
 // ════════════════════════════════════════════════════════════
 // ESTADO GLOBAL
@@ -1969,20 +1969,42 @@ async function cargarListaEmpleados() {
       lista.innerHTML = '<p style="font-size:14px;color:var(--text3);text-align:center;padding:12px">No hay empleados registrados.</p>';
       return;
     }
+
+    const placeholder = '<div style="width:52px;height:52px;border-radius:50%;background:#e8eeff;border:2px solid #c5ceff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">👤</div>';
+
     lista.innerHTML = r.empleados.map(emp => {
-      const fotoHtml = emp.fotoUrl
-        ? `<img src="${emp.fotoUrl}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2.5px solid var(--accent);flex-shrink:0" onerror="this.outerHTML='<div style=width:52px;height:52px;border-radius:50%;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0>👤</div>'">`
-        : `<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-light);border:2.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">👤</div>`;
-      const extras = [emp.area && '🏢 '+emp.area, emp.email && '✉️ '+emp.email, emp.telefono && '📞 '+emp.telefono].filter(Boolean).join(' · ');
-      return `<div style="display:flex;align-items:center;gap:14px;background:white;border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px">
-        ${fotoHtml}
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:800;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emp.nombre||'—'}</div>
-          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-top:2px">${emp.rut||''} · ${emp.cargo||''}</div>
-          ${extras ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${extras}</div>` : ''}
-        </div>
-      </div>`;
+      // Convertir URL de Google Drive al formato lh3 que no bloquea CORS en <img>
+      let fotoSrc = '';
+      if (emp.fotoUrl) {
+        const m = emp.fotoUrl.match(/\/d\/([^/?&]+)|[?&]id=([^&]+)/);
+        const fileId = m ? (m[1] || m[2]) : null;
+        fotoSrc = fileId ? 'https://lh3.googleusercontent.com/d/' + fileId : emp.fotoUrl;
+      }
+
+      // Crear elemento img con id único para poder reemplazarlo en onerror
+      const uid = 'ef' + Math.random().toString(36).slice(2, 7);
+      const fotoHtml = fotoSrc
+        ? `<img id="${uid}" src="${fotoSrc}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2.5px solid var(--accent);flex-shrink:0" onerror="(function(el){el.parentNode.replaceChild((function(){var d=document.createElement('div');d.style.cssText='width:52px;height:52px;border-radius:50%;background:#e8eeff;border:2px solid #c5ceff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0';d.textContent='👤';return d;})(),el)})(document.getElementById('${uid}'))">`
+        : placeholder;
+
+      // Línea 2: RUT · Cargo · Área
+      const linea2 = [emp.rut, emp.cargo, emp.area].filter(Boolean).join(' · ');
+      // Línea 3: Email y Teléfono
+      const linea3 = [
+        emp.email    ? '✉️ ' + emp.email    : '',
+        emp.telefono ? '📞 ' + emp.telefono : ''
+      ].filter(Boolean).join('   ');
+
+      return '<div style="display:flex;align-items:flex-start;gap:14px;background:white;border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px">' +
+        fotoHtml +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:800;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (emp.nombre || '—') + '</div>' +
+          '<div style="font-size:12px;font-weight:600;color:var(--accent);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + linea2 + '</div>' +
+          (linea3 ? '<div style="font-size:11px;color:var(--text2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + linea3 + '</div>' : '') +
+        '</div>' +
+      '</div>';
     }).join('');
+
   } catch(e) {
     lista.innerHTML = '<p style="font-size:13px;color:var(--error);text-align:center;padding:12px">Error al cargar empleados.</p>';
   }
