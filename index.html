@@ -189,11 +189,6 @@
       50% { opacity: 0.6; transform: scale(0.8); }
     }
 
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
     /* ── Tabs ── */
     .tabs {
       display: flex;
@@ -259,6 +254,36 @@
       height: 16px;
       background: var(--accent);
       border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Acordeón: flecha a la derecha, sin centrar */
+    .card-title-accordion {
+      font-family: var(--display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      justify-content: space-between;
+    }
+    .card-title-accordion::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .card-title-accordion .arrow {
+      font-size: 16px;
+      transition: transform 0.3s;
+      margin-left: auto;
     }
 
     /* ── Inputs ── */
@@ -540,7 +565,8 @@
       border-color: rgba(47,158,68,0.3);
       color: var(--success);
     }
-    /* Excepción: procesos en curso (spinner) mantienen color azul */
+
+    /* Solo procesos en curso (spinner) en azul */
     .alert-loading {
       background: var(--accent-light);
       border-color: rgba(59,91,219,0.2);
@@ -633,8 +659,8 @@
 
   <div id="setupBanner" style="display:none"></div>
 
-  <!-- Banner bienvenida admin -->
-  <div id="adminBanner" style="display:none;margin:12px 24px 0;padding:14px 18px;background:linear-gradient(135deg,#2f9e44,#40c057);color:white;border-radius:16px;font-weight:700;font-size:14px;box-shadow:0 4px 16px rgba(47,158,68,0.3);animation:slideDown 0.4s ease">
+  <!-- Banner bienvenida admin - verde claro igual que alertas -->
+  <div id="adminBanner" style="display:none;margin:12px 24px 0;padding:14px 18px;background:var(--success-light);color:var(--success);border:2px solid rgba(47,158,68,0.3);border-radius:16px;font-weight:600;font-size:14px;line-height:1.5;transition:opacity 0.4s ease">
     <span id="adminBannerText"></span>
   </div>
 
@@ -648,12 +674,12 @@
   </div>
 
   <!-- GPS + Dirección -->
-  <div style="padding: 0 24px; margin-top: 12px;">
-    <div class="gps-badge">
+  <div style="padding: 0 24px; margin-top: 12px; display:flex; flex-direction:column; gap:6px;">
+    <div class="gps-badge" style="width:fit-content">
       <div class="gps-dot" id="gpsDot"></div>
       <span id="gpsText">Obteniendo ubicación...</span>
     </div>
-    <div id="direccionBadge" style="margin-top:8px;padding:10px 16px;background:white;border:1.5px solid var(--border);border-radius:50px;font-size:12px;font-weight:600;color:var(--text2);display:none;box-shadow:var(--shadow)">
+    <div id="direccionBadge" style="padding:10px 16px;background:white;border:1.5px solid var(--border);border-radius:50px;font-size:12px;font-weight:600;color:var(--text2);display:none;box-shadow:var(--shadow);width:fit-content;max-width:100%">
       📍 <span id="direccionText">Obteniendo dirección...</span>
     </div>
   </div>
@@ -745,9 +771,9 @@
   <div id="panel-unidades" class="panel">
 
     <div class="card">
-      <div class="card-title" style="cursor:pointer;justify-content:space-between;margin-bottom:0" onclick="toggleAcordeon('unidadBody','unidadArrow')">
+      <div class="card-title-accordion" onclick="toggleAcordeon('unidadBody','unidadArrow')">
         <span>Nueva Unidad</span>
-        <span id="unidadArrow" style="font-size:18px;color:var(--accent);transition:transform 0.3s">&#8963;</span>
+        <span id="unidadArrow" class="arrow">&#8964;</span>
       </div>
       <div id="unidadBody" style="display:none;margin-top:18px">
       <div class="input-group">
@@ -761,7 +787,7 @@
       <div class="input-group">
         <label>Coordenadas</label>
         <input type="text" id="unidadCoordenadas" placeholder="-33.4567, -70.6543">
-        <button onclick="usarUbicacionActual()" style="margin-top:8px;padding:10px;background:var(--accent-light);color:var(--accent);border:none;border-radius:10px;font-weight:700;cursor:pointer;width:100%;font-size:13px">
+        <button onclick="usarUbicacionActual()" id="btnUbicacion" style="margin-top:8px;padding:10px;background:var(--accent-light);color:var(--accent);border:none;border-radius:10px;font-weight:700;cursor:pointer;width:100%;font-size:13px">
           📍 Usar mi ubicación actual
         </button>
       </div>
@@ -777,7 +803,7 @@
         </select>
       </div>
       <button class="btn btn-primary" onclick="guardarUnidad()">💾 Guardar Unidad</button>
-      </div><!-- end unidadBody -->
+      </div>
     </div>
 
     <div class="alert" id="alertUnidades"></div>
@@ -787,7 +813,7 @@
       <div id="listaUnidades"><p style="font-size:14px;color:var(--text3);text-align:center;padding:12px">Cargando...</p></div>
     </div>
 
-  </div>
+  </div><!-- fin panel-unidades -->
 
   <!-- ═══════════════════════════════════ -->
   <!-- PANEL REGISTRAR                     -->
@@ -796,9 +822,9 @@
 
     <!-- Card Nuevo Empleado tipo acordeón -->
     <div class="card">
-      <div class="card-title" style="cursor:pointer;justify-content:space-between;margin-bottom:0" onclick="toggleAcordeon('empleadoBody','empleadoArrow')">
+      <div class="card-title-accordion" onclick="toggleAcordeon('empleadoBody','empleadoArrow')">
         <span>Nuevo Empleado</span>
-        <span id="empleadoArrow" style="font-size:18px;color:var(--accent);transition:transform 0.3s">&#8963;</span>
+        <span id="empleadoArrow" class="arrow">&#8964;</span>
       </div>
       <div id="empleadoBody" style="display:none;margin-top:18px">
         <div class="input-group">
@@ -826,9 +852,9 @@
           <input type="tel" id="telefonoRegistro" placeholder="+56912345678">
         </div>
 
-        <!-- Cámara dentro del acordeón -->
-        <div class="card" style="margin-bottom:12px;box-shadow:none;border-color:var(--border)">
-          <div class="card-title">Foto de Referencia</div>
+        <!-- Cámara foto referencia -->
+        <div style="border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:14px">Foto de Referencia</div>
           <div class="camera-container">
             <video id="video" autoplay playsinline muted></video>
             <div class="camera-overlay">
@@ -844,16 +870,16 @@
 
         <div class="alert" id="alertRegistro"></div>
         <button class="btn btn-primary" id="btnGuardarEmpleado" onclick="guardarEmpleado()" disabled>💾 Guardar empleado</button>
-      </div><!-- end empleadoBody -->
+      </div><!-- fin empleadoBody -->
     </div>
 
-    <!-- Lista de Empleados -->
+    <!-- Lista de Empleados Registrados -->
     <div class="card">
       <div class="card-title">Empleados Registrados</div>
       <div id="listaEmpleados"><p style="font-size:14px;color:var(--text3);text-align:center;padding:12px">Cargando...</p></div>
     </div>
 
-  </div>
+  </div><!-- fin panel-registrar -->
 
 </div>
 
@@ -1129,11 +1155,12 @@ async function obtenerDireccion(lat, lng) {
       state.gps.address = direccionCorta;
       document.getElementById('direccionText').textContent = direccionCorta;
       document.getElementById('direccionBadge').style.display = 'block';
-      // Si el campo de dirección de unidad está vacío y visible, llenarlo también
-      const campoDireccion = document.getElementById('unidadDireccion');
-      if (campoDireccion && !campoDireccion.value) campoDireccion.value = direccionCorta;
+      // Pre-rellenar campos de unidad si están vacíos
+      const campoDir = document.getElementById('unidadDireccion');
+      if (campoDir && !campoDir.value) campoDir.value = direccionCorta;
       const campoCoord = document.getElementById('unidadCoordenadas');
-      if (campoCoord && !campoCoord.value && state.gps.lat) campoCoord.value = state.gps.lat.toFixed(6) + ', ' + state.gps.lng.toFixed(6);
+      if (campoCoord && !campoCoord.value && state.gps.lat)
+        campoCoord.value = state.gps.lat.toFixed(6) + ', ' + state.gps.lng.toFixed(6);
     }
   } catch(e) {
     console.log('Geocoding error:', e.message);
@@ -1263,11 +1290,15 @@ async function buscarEmpleadoMarcacion() {
         cargarListaUnidades();
         cargarListaEmpleados();
         showTab('registrar', document.getElementById('tabRegistrar'));
-        // Banner bienvenida arriba, desaparece en 10 seg
+        // Banner bienvenida: mismo verde claro que alertas, desaparece en 5 seg
         const banner = document.getElementById('adminBanner');
-        document.getElementById('adminBannerText').textContent = `👋 Bienvenido, ${r.empleado.nombre}. Acceso de administrador habilitado.`;
+        document.getElementById('adminBannerText').textContent = `👋 Bienvenido/a, ${r.empleado.nombre}. Acceso de administrador habilitado.`;
         banner.style.display = 'block';
-        setTimeout(() => { banner.style.opacity='0'; banner.style.transition='opacity 0.5s'; setTimeout(()=>banner.style.display='none',500); }, 5000);
+        banner.style.opacity = '1';
+        setTimeout(() => {
+          banner.style.opacity = '0';
+          setTimeout(() => { banner.style.display = 'none'; banner.style.opacity = '1'; }, 500);
+        }, 5000);
         return;
       }
       // Usuario normal → marcar asistencia
@@ -1659,7 +1690,6 @@ async function guardarEmpleado() {
     mostrarAlerta('alertRegistro', '✅ Empleado guardado correctamente', 'success');
     limpiarRegistro();
     cargarListaEmpleados();
-    if (state.adminActual) setTimeout(() => ocultarTabRegistrar(), 2000);
 
   } catch(e) {
     btn.disabled = false;
@@ -1709,99 +1739,10 @@ async function notificarAdminWhatsApp(nombre, tipo, direccion) {
 // ════════════════════════════════════════════════════════════
 // UNIDADES
 // ════════════════════════════════════════════════════════════
-// ════════════════════════════════════════════════════════════
-// ACORDEÓN
-// ════════════════════════════════════════════════════════════
-function toggleAcordeon(bodyId, arrowId) {
-  const body = document.getElementById(bodyId);
-  const arrow = document.getElementById(arrowId);
-  const open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  arrow.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
-  // Al abrir el acordeón de Unidades, pre-rellenar GPS si campos vacíos
-  if (!open && bodyId === 'unidadBody') {
-    const campoCoord = document.getElementById('unidadCoordenadas');
-    const campoDireccion = document.getElementById('unidadDireccion');
-    if (!campoCoord.value && state.gps.lat && state.gps.lng) {
-      campoCoord.value = state.gps.lat.toFixed(6) + ', ' + state.gps.lng.toFixed(6);
-    }
-    if (!campoDireccion.value && state.gps.address) {
-      campoDireccion.value = state.gps.address;
-    }
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-// USAR UBICACIÓN ACTUAL (Unidades)
-// ════════════════════════════════════════════════════════════
-async function usarUbicacionActual() {
-  if (!navigator.geolocation) { alert('GPS no disponible'); return; }
-  const btn = document.querySelector('[onclick="usarUbicacionActual()"]');
-  if (btn) btn.textContent = '⏳ Obteniendo ubicación...';
-  navigator.geolocation.getCurrentPosition(async pos => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-    document.getElementById('unidadCoordenadas').value = lat.toFixed(6) + ', ' + lng.toFixed(6);
-    // Geocoding inverso para dirección
-    try {
-      const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&addressdetails=1&accept-language=es';
-      const r = await fetch(url, { headers: { 'Accept-Language': 'es' } });
-      const data = await r.json();
-      if (data && data.address) {
-        const addr = data.address;
-        const partes = [];
-        if (addr.road) partes.push(addr.road);
-        if (addr.house_number) partes.push(addr.house_number);
-        if (addr.suburb || addr.neighbourhood) partes.push(addr.suburb || addr.neighbourhood);
-        if (addr.city || addr.town || addr.village) partes.push(addr.city || addr.town || addr.village);
-        document.getElementById('unidadDireccion').value = partes.length > 0 ? partes.join(', ') : data.display_name.split(',').slice(0,3).join(',');
-      }
-    } catch(e) { console.log('Geocoding error:', e.message); }
-    if (btn) btn.textContent = '📍 Usar mi ubicación actual';
-  }, () => {
-    alert('No se pudo obtener la ubicación');
-    if (btn) btn.textContent = '📍 Usar mi ubicación actual';
-  }, { enableHighAccuracy: true, timeout: 10000 });
-}
-
-// ════════════════════════════════════════════════════════════
-// LISTA DE EMPLEADOS
-// ════════════════════════════════════════════════════════════
-async function cargarListaEmpleados() {
-  const lista = document.getElementById('listaEmpleados');
-  if (!lista) return;
-  lista.innerHTML = '<p style="font-size:14px;color:var(--text3);text-align:center;padding:12px">Cargando empleados...</p>';
-  try {
-    const r = await apiCallGet({ action: 'listarEmpleados' });
-    if (!r.ok || !r.empleados || r.empleados.length === 0) {
-      lista.innerHTML = '<p style="font-size:14px;color:var(--text3);text-align:center;padding:12px">No hay empleados registrados.</p>';
-      return;
-    }
-    lista.innerHTML = r.empleados.map(emp => {
-      const foto = emp.fotoUrl
-        ? `<img src="${emp.fotoUrl}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2.5px solid var(--accent);flex-shrink:0" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-        : '';
-      const placeholder = `<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-light);border:2.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0${emp.fotoUrl?';display:none':''}">👤</div>`;
-      const extras = [emp.area ? '🏢 ' + emp.area : '', emp.email ? '✉️ ' + emp.email : '', emp.telefono ? '📞 ' + emp.telefono : ''].filter(Boolean).join(' · ');
-      return `
-      <div style="display:flex;align-items:center;gap:14px;background:white;border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px">
-        ${foto}${placeholder}
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:800;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${emp.nombre || '—'}</div>
-          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-top:1px">${emp.rut || ''} · ${emp.cargo || ''}</div>
-          ${extras ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${extras}</div>` : ''}
-        </div>
-      </div>`;
-    }).join('');
-  } catch(e) {
-    lista.innerHTML = '<p style="font-size:13px;color:var(--error);text-align:center;padding:12px">Error al cargar empleados.</p>';
-  }
-}
-
 async function guardarUnidad() {
   const unidad      = document.getElementById('unidadNombre').value.trim();
   const descripcion = document.getElementById('unidadDescripcion').value.trim();
-  // Si el campo está vacío, usar los datos GPS del estado global como fallback
+  // Usar GPS del estado si el campo está vacío
   let coordenadas = document.getElementById('unidadCoordenadas').value.trim();
   let direccion   = document.getElementById('unidadDireccion').value.trim();
   if (!coordenadas && state.gps.lat && state.gps.lng) {
@@ -1819,17 +1760,10 @@ async function guardarUnidad() {
     return;
   }
 
-  mostrarAlerta('alertUnidades', '<div class="spinner"></div> Guardando...', 'info');
+  mostrarAlerta('alertUnidades', '<div class="spinner"></div> Guardando...', 'loading');
   try {
-    // Construir URL de diagnóstico visible en consola
     const params = { action: 'guardarUnidad', unidad, descripcion, coordenadas, direccion, activa };
-    const urlDiag = new URL(APPS_SCRIPT_URL);
-    Object.entries(params).forEach(([k,v]) => urlDiag.searchParams.set(k, v));
-    console.log('📤 URL guardarUnidad:', urlDiag.toString());
-
     const r = await apiCallGet(params);
-    console.log('📥 Respuesta guardarUnidad:', JSON.stringify(r));
-
     if (r.ok) {
       mostrarAlerta('alertUnidades', '✅ Unidad guardada correctamente.', 'success');
       document.getElementById('unidadNombre').value = '';
@@ -1840,11 +1774,9 @@ async function guardarUnidad() {
       cargarListaUnidades();
     } else {
       mostrarAlerta('alertUnidades', `❌ Error: ${r.error || JSON.stringify(r)}`, 'error');
-      console.error('❌ Error detalle:', r);
     }
   } catch(e) {
     mostrarAlerta('alertUnidades', `❌ Error de conexión: ${e.message}`, 'error');
-    console.error('❌ Excepción:', e);
   }
 }
 
@@ -1857,23 +1789,19 @@ async function cargarListaUnidades() {
       lista.innerHTML = '<p style="font-size:14px;color:var(--text3);text-align:center;padding:12px">No hay unidades registradas.</p>';
       return;
     }
-    // DEBUG: loguear primera unidad para ver sus claves reales
-    if (r.unidades.length > 0) console.log('🔑 Claves unidad[0]:', JSON.stringify(r.unidades[0]));
     lista.innerHTML = r.unidades.map(u => {
       const un = normalizarUnidad(u);
       const linea1 = [un.nombre, un.descripcion, un.direccion].filter(Boolean).join(' · ');
       const linea2 = [un.coordenadas ? '📍 ' + un.coordenadas : '', un.activa ? '✅ Activa' : '❌ Inactiva'].filter(Boolean).join('  ');
-      return `
-      <div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:8px">
-        <div style="font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${linea1}</div>
+      return `<div style="background:white;border:1.5px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:8px">
+        <div style="font-weight:700;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${linea1}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:3px">${linea2}</div>
       </div>`;
     }).join('');
   } catch(e) {
-    lista.innerHTML = '<p style="font-size:13px;color:var(--danger);text-align:center;padding:12px">Error al cargar unidades.</p>';
+    lista.innerHTML = '<p style="font-size:13px;color:var(--error);text-align:center;padding:12px">Error al cargar unidades.</p>';
   }
 }
-
 
 function cargarImagen(src, crossOrigin) {
   return new Promise((resolve, reject) => {
@@ -1897,19 +1825,19 @@ function cargarImagen(src, crossOrigin) {
   });
 }
 
-// timers para auto-ocultar alertas
+// ════════════════════════════════════════════════════════════
+// ALERTAS — verde claro, auto-ocultar 5 seg
+// ════════════════════════════════════════════════════════════
 const _alertTimers = {};
 
 function mostrarAlerta(id, msg, tipo) {
   const el = document.getElementById(id);
+  if (!el) return;
   el.innerHTML = msg;
-  // Si es proceso en curso (spinner), usar clase loading (azul, sin auto-ocultar)
-  const esLoader = msg.includes('spinner') || msg.includes('⏳') || tipo === 'loading';
+  const esLoader = msg.includes('spinner') || tipo === 'loading';
   el.className = `alert alert-${esLoader ? 'loading' : tipo} visible`;
   el.style.opacity = '1';
-  // Cancelar timer anterior si existía
   if (_alertTimers[id]) clearTimeout(_alertTimers[id]);
-  // Auto-ocultar en 5 segundos (excepto loaders)
   if (!esLoader) {
     _alertTimers[id] = setTimeout(() => {
       el.style.opacity = '0';
@@ -1920,7 +1848,89 @@ function mostrarAlerta(id, msg, tipo) {
 
 function ocultarAlerta(id) {
   if (_alertTimers[id]) clearTimeout(_alertTimers[id]);
-  document.getElementById(id).className = 'alert';
+  const el = document.getElementById(id);
+  if (el) el.className = 'alert';
+}
+
+// ════════════════════════════════════════════════════════════
+// ACORDEÓN
+// ════════════════════════════════════════════════════════════
+function toggleAcordeon(bodyId, arrowId) {
+  const body  = document.getElementById(bodyId);
+  const arrow = document.getElementById(arrowId);
+  const open  = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+  // Al abrir acordeón de Unidades, pre-rellenar GPS si campos vacíos
+  if (!open && bodyId === 'unidadBody') {
+    const campoCoord = document.getElementById('unidadCoordenadas');
+    const campoDireccion = document.getElementById('unidadDireccion');
+    if (!campoCoord.value && state.gps.lat && state.gps.lng)
+      campoCoord.value = state.gps.lat.toFixed(6) + ', ' + state.gps.lng.toFixed(6);
+    if (!campoDireccion.value && state.gps.address)
+      campoDireccion.value = state.gps.address;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// USAR UBICACIÓN ACTUAL
+// ════════════════════════════════════════════════════════════
+async function usarUbicacionActual() {
+  if (!navigator.geolocation) { alert('GPS no disponible'); return; }
+  const btn = document.getElementById('btnUbicacion');
+  if (btn) btn.textContent = '⏳ Obteniendo ubicación...';
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    document.getElementById('unidadCoordenadas').value = lat.toFixed(6) + ', ' + lng.toFixed(6);
+    // Geocoding inverso
+    try {
+      const url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&accept-language=es';
+      const r = await fetch(url);
+      const data = await r.json();
+      if (data && data.address) {
+        const a = data.address;
+        const partes = [a.road, a.house_number, a.suburb || a.neighbourhood, a.city || a.town || a.village].filter(Boolean);
+        document.getElementById('unidadDireccion').value = partes.length ? partes.join(', ') : data.display_name.split(',').slice(0,3).join(',');
+      }
+    } catch(e) { console.log('Geocoding:', e.message); }
+    if (btn) btn.textContent = '📍 Usar mi ubicación actual';
+  }, () => {
+    if (btn) btn.textContent = '📍 Usar mi ubicación actual';
+    alert('No se pudo obtener la ubicación');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+// ════════════════════════════════════════════════════════════
+// LISTA DE EMPLEADOS
+// ════════════════════════════════════════════════════════════
+async function cargarListaEmpleados() {
+  const lista = document.getElementById('listaEmpleados');
+  if (!lista) return;
+  lista.innerHTML = '<p style="font-size:14px;color:var(--text3);text-align:center;padding:12px">Cargando...</p>';
+  try {
+    const r = await apiCallGet({ action: 'listarEmpleados' });
+    if (!r.ok || !r.empleados || r.empleados.length === 0) {
+      lista.innerHTML = '<p style="font-size:14px;color:var(--text3);text-align:center;padding:12px">No hay empleados registrados.</p>';
+      return;
+    }
+    lista.innerHTML = r.empleados.map(emp => {
+      const fotoHtml = emp.fotoUrl
+        ? `<img src="${emp.fotoUrl}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2.5px solid var(--accent);flex-shrink:0" onerror="this.outerHTML='<div style=width:52px;height:52px;border-radius:50%;background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0>👤</div>'">`
+        : `<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-light);border:2.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">👤</div>`;
+      const extras = [emp.area && '🏢 '+emp.area, emp.email && '✉️ '+emp.email, emp.telefono && '📞 '+emp.telefono].filter(Boolean).join(' · ');
+      return `<div style="display:flex;align-items:center;gap:14px;background:white;border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px">
+        ${fotoHtml}
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:14px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${emp.nombre||'—'}</div>
+          <div style="font-size:12px;font-weight:600;color:var(--accent);margin-top:2px">${emp.rut||''} · ${emp.cargo||''}</div>
+          ${extras ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${extras}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    lista.innerHTML = '<p style="font-size:13px;color:var(--error);text-align:center;padding:12px">Error al cargar empleados.</p>';
+  }
 }
 </script>
 </body>
