@@ -1670,20 +1670,22 @@ async function guardarEmpleado() {
     btn.textContent = '⏳ Subiendo foto...';
     const fotoComprimida = await comprimirImagen(state.fotoRegistroBase64, 120, 0.35);
 
-    const CHUNK = 1500;
+    // Eliminar el prefijo data:image/...;base64, para enviar solo la data pura
+    const base64Data = fotoComprimida.replace(/^data:image\/\w+;base64,/, '');
+
+    // Chunks más pequeños para evitar límite de URL (800 chars)
+    const CHUNK = 800;
     const chunks = [];
-    for (let i = 0; i < fotoComprimida.length; i += CHUNK) {
-      chunks.push(fotoComprimida.slice(i, i + CHUNK));
+    for (let i = 0; i < base64Data.length; i += CHUNK) {
+      chunks.push(base64Data.slice(i, i + CHUNK));
     }
 
     for (let i = 0; i < chunks.length; i++) {
       btn.textContent = `⏳ Foto ${i+1}/${chunks.length}...`;
+      // Enviar dentro de "datos" como JSON para que el GS lo parsee correctamente
       const rc = await apiCallGet({
         action: 'recibirChunkFoto',
-        rut,
-        chunk: chunks[i],
-        index: i,
-        total: chunks.length
+        datos: JSON.stringify({ rut, chunk: chunks[i], index: i, total: chunks.length })
       });
       if (!rc.ok) throw new Error('Error subiendo foto parte ' + (i+1));
     }
