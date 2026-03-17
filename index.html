@@ -1004,15 +1004,15 @@ function apiCallGet(params) {
     script.src = url.toString();
     script.onerror = () => {
       delete window[cbName];
-      reject(new Error('Error de conexión con el servidor'));
+      reject(new Error('Sin conexión al servidor. Verifica tu red e intenta de nuevo.'));
     };
     document.head.appendChild(script);
     setTimeout(() => {
       if (window[cbName]) {
         delete window[cbName];
-        reject(new Error('Timeout'));
+        reject(new Error('El servidor tardó demasiado. Intenta de nuevo.'));
       }
-    }, 30000);
+    }, 60000);
   });
 }
 
@@ -1138,8 +1138,11 @@ function obtenerGPS() {
     pos => {
       state.gps.lat = pos.coords.latitude;
       state.gps.lng = pos.coords.longitude;
-      state.gps.address = pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
-      setGPSStatus(true, state.gps.address);
+      // coords como texto solo para el badge GPS — address se llena por geocoding
+      const coordsTexto = pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5);
+      setGPSStatus(true, coordsTexto);
+      // Solo inicializar address con coords si aún está vacío (se sobrescribe cuando llega geocoding)
+      if (!state.gps.address) state.gps.address = coordsTexto;
       obtenerDireccion(pos.coords.latitude, pos.coords.longitude);
       verificarProximidadUnidades(pos.coords.latitude, pos.coords.longitude);
     },
@@ -1327,7 +1330,7 @@ async function buscarEmpleadoMarcacion() {
       document.getElementById('seccionCamara').style.display = 'none';
     }
   } catch(e) {
-    mostrarAlerta('alertMarcacion', `❌ Error de conexión: ${e.message}`, 'error');
+    mostrarAlerta('alertMarcacion', '⚠️ ' + (e.message || 'Error de conexión') + '. Toca "Buscar empleado" para reintentar.', 'error');
   }
 }
 
@@ -1572,9 +1575,11 @@ async function registrarAsistenciaFinal() {
         cargo: state.empleadoActual.cargo,
         area: state.empleadoActual.area,
         tipoMarcacion: state.tipoMarcacion,
-        latitud: state.gps.lat,
+        latitud:  state.gps.lat,
         longitud: state.gps.lng,
-        direccion: state.gps.address
+        direccion: state.gps.address && !state.gps.address.match(/^-?\d/) 
+          ? state.gps.address  // es una dirección real (no empieza con número negativo de coordenada)
+          : (state.gps.address || '')
       }
     });
 
