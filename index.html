@@ -156,7 +156,7 @@
 
     /* ── GPS badge ── */
     .gps-badge {
-      margin: 16px 24px 0;
+      margin: 0;
       display: inline-flex;
       align-items: center;
       gap: 8px;
@@ -257,7 +257,7 @@
       flex-shrink: 0;
     }
 
-    /* Acordeón: flecha a la derecha, sin centrar */
+    /* Acordeón: barra izquierda + texto alineado izq + flecha derecha */
     .card-title-accordion {
       font-family: var(--display);
       font-size: 13px;
@@ -270,7 +270,6 @@
       align-items: center;
       gap: 8px;
       cursor: pointer;
-      justify-content: space-between;
     }
     .card-title-accordion::before {
       content: '';
@@ -280,10 +279,14 @@
       border-radius: 2px;
       flex-shrink: 0;
     }
+    .card-title-accordion .acc-label {
+      flex: 1;
+      text-align: left;
+    }
     .card-title-accordion .arrow {
       font-size: 16px;
       transition: transform 0.3s;
-      margin-left: auto;
+      flex-shrink: 0;
     }
 
     /* ── Inputs ── */
@@ -772,7 +775,7 @@
 
     <div class="card">
       <div class="card-title-accordion" onclick="toggleAcordeon('unidadBody','unidadArrow')">
-        <span>Nueva Unidad</span>
+        <span class="acc-label">Nueva Unidad</span>
         <span id="unidadArrow" class="arrow">&#8964;</span>
       </div>
       <div id="unidadBody" style="display:none;margin-top:18px">
@@ -823,7 +826,7 @@
     <!-- Card Nuevo Empleado tipo acordeón -->
     <div class="card">
       <div class="card-title-accordion" onclick="toggleAcordeon('empleadoBody','empleadoArrow')">
-        <span>Nuevo Empleado</span>
+        <span class="acc-label">Nuevo Empleado</span>
         <span id="empleadoArrow" class="arrow">&#8964;</span>
       </div>
       <div id="empleadoBody" style="display:none;margin-top:18px">
