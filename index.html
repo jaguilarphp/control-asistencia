@@ -983,72 +983,55 @@ function comprimirImagen(base64, maxWidth = 150, quality = 0.4) {
   });
 }
 
-// Llamada GET via JSONP para datos pequeños
 // ════════════════════════════════════════════════════════════
-// API CALL — fetch con fallback a JSONP para máxima compatibilidad
+// API CALL — fetch primero (iOS Safari compatible), fallback JSONP
 // ════════════════════════════════════════════════════════════
+function buildUrl(params) {
+  const url = new URL(APPS_SCRIPT_URL);
+  Object.entries(params).forEach(([k, v]) => {
+    url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : v);
+  });
+  return url;
+}
+
+function parseResponse(text) {
+  const clean = text.trim();
+  if (clean.startsWith('{') || clean.startsWith('[')) return JSON.parse(clean);
+  const m = clean.match(/\{[\s\S]*\}/);
+  if (m) return JSON.parse(m[0]);
+  throw new Error('Respuesta inválida del servidor');
+}
+
+function apiCallFetch(params) {
+  const url = buildUrl(params);
+  return fetch(url.toString(), { method: 'GET', redirect: 'follow', cache: 'no-store' })
+    .then(res => res.text())
+    .then(text => parseResponse(text));
+}
+
+function apiCallJSONP(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 9999);
+    const url = buildUrl(params);
+    url.searchParams.set('callback', cbName);
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) { done = true; delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); reject(new Error('El servidor tardó demasiado. Intenta de nuevo.')); }
+    }, 60000);
+    window[cbName] = (data) => {
+      if (!done) { done = true; clearTimeout(timer); delete window[cbName]; if (script.parentNode) script.parentNode.removeChild(script); resolve(data); }
+    };
+    const script = document.createElement('script');
+    script.src = url.toString();
+    script.onerror = () => {
+      if (!done) { done = true; clearTimeout(timer); delete window[cbName]; reject(new Error('Sin conexión al servidor. Verifica tu red.')); }
+    };
+    document.head.appendChild(script);
+  });
+}
 
 function apiCallGet(params) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(APPS_SCRIPT_URL);
-    Object.entries(params).forEach(([k, v]) => {
-      url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : v);
-    });
-
-    // Intentar con fetch primero (funciona en iOS Safari moderno)
-    fetch(url.toString(), { method: 'GET', redirect: 'follow' })
-      .then(res => {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.text();
-      })
-      .then(text => {
-        // La respuesta puede ser JSON puro o JSONP: cb_xxx({...})
-        const clean = text.trim();
-        let data;
-        if (clean.startsWith('{') || clean.startsWith('[')) {
-          data = JSON.parse(clean);
-        } else {
-          // JSONP — extraer el JSON del interior
-          const match = clean.match(/\{[\s\S]*\}/);
-          if (match) data = JSON.parse(match[0]);
-          else throw new Error('Respuesta inesperada del servidor');
-        }
-        resolve(data);
-      })
-      .catch(() => {
-        // Fallback a JSONP para navegadores con restricciones de fetch/CORS
-        const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
-        const urlJSONP = new URL(APPS_SCRIPT_URL);
-        Object.entries(params).forEach(([k, v]) => {
-          urlJSONP.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : v);
-        });
-        urlJSONP.searchParams.set('callback', cbName);
-
-        const timer = setTimeout(() => {
-          if (window[cbName]) {
-            delete window[cbName];
-            if (script.parentNode) script.parentNode.removeChild(script);
-            reject(new Error('El servidor tardó demasiado. Intenta de nuevo.'));
-          }
-        }, 60000);
-
-        window[cbName] = (data) => {
-          clearTimeout(timer);
-          delete window[cbName];
-          if (script.parentNode) script.parentNode.removeChild(script);
-          resolve(data);
-        };
-
-        const script = document.createElement('script');
-        script.src = urlJSONP.toString();
-        script.onerror = () => {
-          clearTimeout(timer);
-          delete window[cbName];
-          reject(new Error('Sin conexión al servidor. Verifica tu red e intenta de nuevo.'));
-        };
-        document.head.appendChild(script);
-      });
-  });
+  return apiCallFetch(params).catch(() => apiCallJSONP(params));
 }
 
 // Llamada POST via iframe para datos grandes (evita CORS)
